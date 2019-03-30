@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>FOSSASIA Summit 2018</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <style type="text/css">
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      /*@import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);*/
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+      @import url('https://fonts.googleapis.com/css?family=Montserrat:400');
+
+      body { font-family: 'Montserrat'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      img .img-right-half {
+        right: 0;
+        width: 50%;
+        height: auto;
+      }
+      .remark-slide-content {
+        color: #ded754;
+        background: #253552;
+      }
+      a {
+        color: #ded754;
+      }
+      p ul {
+        font-size: 200%;
+      }
+      .pp > img{
+        width: 25%;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# Building microservices with firefly!
+
+## Nabarun Pal
+
+---
+
+# About Me
+
+### Nabarun Pal
+- Final Year Undergraduate @IITRoorkee
+
+- Software Engineering Intern @rorodata
+
+- Builds autonomous robots @TeamRoboconIITR
+
+- Sources of my dopamine -> [Code, Kindle, Food, (Sugar, Caffeine)]
+
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+.footnote.right.bottom[www.nabarun.in<br/>github.com/palnabarun<br/>twitter.com/_palnabarun]
+
+<!-- .right[.pp[ -->
+<!-- ![Nabarun Pal](../../assets/css/images/pp2.jpeg)]] -->
+
+---
+
+class: center, middle
+
+# The Problem
+
+???
+exposing functions as API's for others to use
+
+---
+
+# But why?
+
+--
+
+- Use functions in a different environment
+
+--
+
+- Loose couple functionalities of an appplication
+
+--
+
+- Run functions on different compute resources
+
+---
+
+# Use Cases
+
+--
+
+- Deploy machne learning models
+
+--
+
+- Run functional utilities remotely
+
+--
+
+- Build microservices
+
+---
+
+# Challenges
+
+--
+
+- Need to writing a web application
+
+--
+
+- Requirement of a client library
+
+--
+
+- How would you authenticate users?
+
+--
+
+- How do you validate the data sent by users?
+
+---
+
+
+
+---
+
+# Why firefly?
+
+--
+
+- Deploying functions is a cake walk
+
+--
+
+- Deploying predictive models by adding minimal code
+
+--
+
+- Functions accessible through a REST based API or a RPC like client
+
+--
+
+- It puts your python functions on steroids!
+
+---
+
+# Install
+
+Release version:
+```bash
+$ pip install firefly-python
+```
+
+Development version:
+```bash
+$ git clone https://github.com/rorodata/firefly
+$ cd firefly
+$ pip install -e .
+```
+
+---
+
+# Code
+
+
+Your usual code:
+
+```python
+# funcs.py
+
+def square(n):
+  return n**2
+```
+
+---
+
+# Run
+
+Invoke firefly:
+
+```bash
+$ firefly funcs.square
+2017-11-04 01:55:02 firefly [INFO] Starting Firefly...
+http://127.0.0.1:8000/
+```
+
+--
+
+Multiple function invokation:
+
+```bash
+$ firefly funcs.square funcs.cube
+2017-11-04 01:55:02 firefly [INFO] Starting Firefly...
+http://127.0.0.1:8000/
+```
+
+--
+
+or, using Gunicorn:
+
+```bash
+$ gunicorn firefly.main:app -e FIREFLY_FUNCTIONS="funcs.square"
+[2017-11-04 01:59:36 +0530] [14182] [INFO] Starting gunicorn 19.7.1
+[2017-11-04 01:59:36 +0530] [14182] [INFO] Listening at: http://127.0.0.1:8000 (14182)
+[2017-11-04 01:59:36 +0530] [14182] [INFO] Using worker: sync
+[2017-11-04 01:59:36 +0530] [14185] [INFO] Booting worker with pid: 14185
+2017-11-04 01:59:36 firefly [INFO] Starting Firefly...
+```
+
+---
+
+# Usage
+
+But, how would you use the functions?
+
+--
+
+We have a client for you.
+
+```python
+>>> import firefly
+>>> client = firefly.Client("http://127.0.0.1:8000/")
+>>> client.square(n=4)
+16
+```
+
+--
+
+But, how does that work?
+
+--
+
+It is a simple RESTful API.
+
+```bash
+$ curl -d '{"n": 4}' http://127.0.0.1:8000/square
+16
+```
+
+--
+
+The client supports any JSON-friendly data type or file objects.
+
+---
+
+# Config File
+
+
+firefly includes support for specifying functions and paths from config files.
+
+
+```yaml
+# firefly.yml
+
+functions:
+  square:
+    path: "/square"
+    function: "funcs.square"
+  cube:
+    path: "/cube"
+    function: "funcs.cube"
+  ...
+```
+
+Specify the config file as:
+
+```bash
+$ firefly -c firefly.yml
+http://127.0.0.1:8000/
+...
+```
+
+--
+
+or,
+
+```bash
+$ gunicorn firefly.main:app -e FIREFLY_CONFIG="firefly.yml"
+...
+``` 
+
+---
+
+# Authentication
+
+Ability to specify an auth token for requests
+
+```bash
+$ firefly --token qwerty123 funcs.square
+...
+```
+
+And you can use it like this:
+
+```python
+>>> import firefly
+>>> client = firefly.Client("http://127.0.0.1:8000/", auth_token="qwerty123")
+>>> client.square(n=4)
+16
+```
+
+---
+
+# Deploying ML models
+
+```python
+# model.py
+from sklearn.externals import joblib
+
+clf = joblib.load('fisheriris.pkl')
+
+def predict(a):
+    predicted = clf.predict(a)    # predicted is 1x1 numpy array
+    return int(predicted[0])
+```
+
+--
+
+Start firefly:
+
+```bash
+$ firefly model.predict
+...
+```
+
+Using the client for accessing the remote function:
+
+```python
+>>> import firefly
+>>> remote_model = firefly.Client("http://<server_ip>/")
+>>> remote_model.predict(features=[5.9, 3, 5.1, 1.8]))
+2
+```
+
+---
+
+# Under the hood
+
+--
+
+- Client invokes a function
+
+--
+
+- Client processes the inputs
+
+--
+
+- Client makes a request to the appropriate endpoint on the server
+
+--
+
+- Server checks whether the endpoint requested is exposed
+
+--
+
+- Server processes the request and validates the inputs
+
+--
+
+- The function is then called passing in the inputs
+
+--
+
+- Function result is processed to either JSON/binary stream
+
+--
+
+- Server responds to the client with appropriate status code and data
+
+---
+
+class: center, middle
+
+# Side effects
+
+???
+- Microservices
+- rorocloud
+- rorolite
+
+---
+
+class: center, middle
+
+# Example microservices
+
+???
+- firefly.yml
+- write a simple firefly.yml and show how you deploy it
+- background-removal-demo
+
+---
+
+# Coming Soon...
+
+- Authentication methods like OAuth, Social Login
+- True RESTful API with support for all HTTP methods
+- Canonical URL's
+- Input Validation using Python 3 Type Annotations
+- Support for NumPy arrays
+- API browser 
+- JavaScript Client library
+
+---
+
+class: center, middle
+
+# Questions?
+
+---
+
+# References
+
+https://firefly-python.readthedocs.io
+
+https://github.com/rorodata/firefly
+
+https://github.com/rorodata/rorolite
+
+---
+
+class: center, middle
+
+# Feedback
+<!-- http://bit.ly/pyconfeedback -->
+
+    </textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js" type="text/javascript">
+    </script>
+    <script type="text/javascript">
+      var slideshow = remark.create({
+        ratio: '16:9',
+        slideNumberFormat: '%current%'
+      });
+    </script>
+  </body>
+</html>
