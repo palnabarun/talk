@@ -44,15 +44,16 @@ class: center, middle
 
 ## Nabarun Pal
 
-### This is a draft. The final slides will be up soon.
-
 ---
 
 # About Me
 
 ### Nabarun Pal
 
-- TODO
+- Platform Engineer at rorodata
+- Optimizing development time through simple abstractions/tooling
+- Venturing into Container Orchestration and Serverless Computing
+- Contributor to the Kubernetes ecosystem
 
 <br/>
 <br/>
@@ -68,6 +69,84 @@ class: center, middle
 
 ---
 
+# Agenda
+
+- Genesis
+- Current State
+- The Abstraction
+- Demo
+- Performance Metrics
+- Limitations and Future Improvements
+
+---
+
+class: center, middle
+
+# Genesis
+
+---
+
+# Multithreading
+
+### Pros
+
+- Lightweight
+- Shared state between multiple threads
+- Works flawlessly for I/O-bound applications
+
+### Cons
+
+- Subject to Global Interpreter Lock
+- Context switching overhead
+- Code prone to race conditions
+- Does not work for CPU-bound tasks
+
+---
+
+# Multiprocessing
+
+### Pros
+
+- Isolation of memory space
+- Leverages multiples processors & cores
+- GIL limitations don’t apply
+- Synchronization primitives like locks are mandatory unless sharing data
+- Works well for CPU-bound tasks
+
+### Cons
+
+- Sharing data between processes is a little bit complicated
+- Bulky memory footprint
+- Limited scaling
+
+---
+
+# Can Kubernetes help?
+
+## Pros
+
+- Abstracts out infrastructure
+- Simple interface
+- Can scale based on workload
+
+## Cons
+
+- Layer on top of VM’s - Slow to scale up/down
+- Autoscaling is not a core functionality
+- Needs dedicated time to manage
+
+---
+
+# What about Serverless?
+
+- Zero Infrastructure Management
+- Near Infinite Scaling
+- High Availability
+- No Idle Resources
+- Suitable for short-lived workloads
+
+---
+
 class: center, middle
 
 # Any problem in computer science can be solved by introducing an extra level of indirection.
@@ -76,61 +155,164 @@ class: center, middle
 
 ---
 
-# Agenda
+class: center, middle
 
-- TODO
+# &ldquo;LambdaPool&rdquo;
 
----
-
-# Need for parallel computing
-
-- TODO
-
-- This section talks about the need for data scientists to perform
-parallel computing/processing by mentioning examples from their day to
-day life.
+#### The Indirection
 
 ---
 
-# Present Tools
+# Requirements
 
-- TODO
-
-- This section will talk about ThreadPool, ProcessPool, their API and
-their limitations.
-
----
-
-# Going serverless
-
-- TODO
-
-- This section will talk about the dynamic nature of serverless architecture and its
-ability to scale beautifully with atomic and ephemeral workloads.
+- Minimum overhead on users
+- Simple way to create, delete, list and update lambda functions
+- Coherent ways to invoke the lambda function
+- Easy to use interface
 
 ---
 
-# Building the right indirection
+# Features
 
-- TODO
-
-- This section deals with how LambdaPool came into the picture with an insight into its internal working.
+- CLI to create, list, update and delete functions
+- Support for specifying function layers and list the layers used for each functions
+- LambdaPool interface
+- LambdaExecutor Interface
 
 ---
-# Benefits of the tool
 
-- TODO
-- This section provides some comparison metrics like time saved using LambdaPool, the costs benefits of computing, the developer time saved.
+# Source Code
+
+<a href="https://github.com/rorodata/lambdapool">https://github.com/rorodata/lambdapool</a>
+
+# Installation
+
+```bash
+$  pip install --user https://lambdapool-releases.s3.amazonaws.com/lambdapool-0.9.7.tar.gz
+```
+
+---
+
+# CLI
+
+```bash
+$ lambdapool
+Usage: lambdapool [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  create  Create a new function
+  delete  Delete a function
+  list    List all deployed functions
+  update  Update an existing function
+```
+
+---
+
+# Project Structure
+
+```bash
+examples $ tree algorithms/
+algorithms
+├── functions.py
+└── __init__.py
+
+examples $ cat algorithms/functions.py
+def fibonacci(n):
+    '''A naive implementation of computing n'th fibonacci number
+    '''
+    if n==0: return 0
+    if n==1: return 1
+    return fibonacci(n-1) + fibonacci(n-2)
+```
+
+---
+
+# Creating a function
+
+```bash
+examples $ lambdapool create algorithms algorithms/ --timeout=300 --memory=128
+=== Creating lambdapool function ===
+=== Copying all specified files and directories ===
+Copying algorithms.py...
+...
+=== Succesfully created lambdapool function algorithms ===
+```
+
+---
+
+# LambdaPool
+
+- Implements the same interface as `ThreadPool` and `ProcessPool`
+
+```python
+>>> from lambdapool import LambdaPool
+>>> pool = LambdaPool(workers=10, lambda_function='algorithms')
+>>> from algorithms.functions import fibonacci
+>>> pool.apply(fibonacci, args=(10,))
+55
+>>> pool.map(fibonacci, range(100))
+[0, 1, 1, 2, 3, 5, 8, ...]
+```
+
+---
+
+# LambdaExecutor
+
+- Implements the same interface as `ThreadPoolExecutor` and `ProcessPoolExecutor`
+
+```python
+>>> from lambdapool import LambdaExecutor
+>>> from algorithms.functions import fibonacci
+>>> with LambdaExecutor(lambda_function='algorithms') as executor:
+...    futures = [executor.submit(fibonacci, n) for n in range(100)]
+...    fibonaccis = [f.result() for f in futures]
+
+>>> print(fibonaccis)
+[0, 1, 1, 2, 3, 5, 8, ...]
+```
+
+---
+
+class: center, middle
+
+# Demo
+
+---
+
+# Benefits
+
+- Compute time
+- Compute Costs
+- Developer Time
+
+---
+
+# Current Limitations
+
+- Serialization of the payload is being a hurdle
+- Decoupling between function provisioning and invocation
+- Size of execution environment
+
+### Inherent to Serverless
+
+- Cold start issues
+- Additional Network Overhead
+- Not suitable for long running workloads
+- Troubleshooting is hard
+- Local testing
 
 ---
 
 # Future Goals
 
-- TODO
-
-- Talks about ThreadPoolExecutor API and how this simplifies again the
-way a data scientist works.
-
+- Distribute lambdapool through PyPI
+- Permissions management system
+- System to fetch execution logs
+- Better layer management
+- Make the function update process intelligent
 
 ---
 
@@ -138,7 +320,9 @@ class: center, middle
 
 # Thank You!
 
-    </textarea>
+#### <b>Contact Us:</b> <a href="mailto:opensource@rorodata.com">opensource@rorodata.com</a>
+
+</textarea>
     <script src="https://remarkjs.com/downloads/remark-latest.min.js" type="text/javascript">
     </script>
     <script type="text/javascript">
